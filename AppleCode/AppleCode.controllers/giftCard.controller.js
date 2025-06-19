@@ -35,7 +35,7 @@ const uploadCodes = async (req, res) => {
     }
 
     // If all codes are new, insert
-    const rate = amount === 2 ? 206 : 525;
+    const rate = amount === 2 ? 200 : 515;
     const documents = normalizedCodes.map(code => ({
       code,
       amount,
@@ -69,8 +69,8 @@ const getGiftCardStats = async (req, res) => {
       isClaimed: false
     });
 
-    const twoDollarRate = 206; // You may optionally fetch from DB if dynamic
-    const fiveDollarRate = 525;
+    const twoDollarRate = 200; // You may optionally fetch from DB if dynamic
+    const fiveDollarRate = 515;
 
     res.status(200).json({
       twoDollarCount,

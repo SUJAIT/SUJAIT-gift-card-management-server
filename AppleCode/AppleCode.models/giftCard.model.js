@@ -39,9 +39,9 @@ code: {
 // 💡 Pre-save hook to set rate based on amount
 giftCardSchema.pre("save", function (next) {
   if (this.amount === 2) {
-    this.rate = 206;
+    this.rate = 200;
   } else if (this.amount === 5) {
-    this.rate = 525;
+    this.rate = 515;
   }
   next();
 });
