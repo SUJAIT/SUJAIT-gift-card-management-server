@@ -37,6 +37,12 @@ const userSchema = new mongoose.Schema({
     }
   },
 
+claimedHistory: {
+  twoDollar: [{ code: String, claimedAt: Date }],
+  fiveDollar: [{ code: String, claimedAt: Date }]
+},
+
+
   createdAt: {
     type: Date,
     default: Date.now,

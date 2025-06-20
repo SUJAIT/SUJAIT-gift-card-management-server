@@ -1,4 +1,5 @@
 import userModel from "../../User/user.model.js";
+import GiftCard from "../AppleCode.models/giftCard.model.js";
 import giftCardModel from "../AppleCode.models/giftCard.model.js"; // extension .js must
 
 
@@ -116,7 +117,7 @@ const claimGiftCards = async (req, res) => {
       return res.status(400).json({ message: "Some codes are invalid or already claimed." });
     }
 
-    // Update each card with claimed info
+    // Update gift cards as claimed
     const bulkOps = cards.map(card => ({
       updateOne: {
         filter: { _id: card._id },
@@ -127,25 +128,35 @@ const claimGiftCards = async (req, res) => {
         }
       }
     }));
-
     await giftCardModel.bulkWrite(bulkOps);
 
     // Calculate dues
     let twoDollarAmount = 0;
     let fiveDollarAmount = 0;
+    const twoDollarCodes = [];
+    const fiveDollarCodes = [];
 
     for (const card of cards) {
-      if (card.amount === 2) twoDollarAmount += card.rate;
-      else if (card.amount === 5) fiveDollarAmount += card.rate;
+      if (card.amount === 2) {
+        twoDollarAmount += card.rate;
+        twoDollarCodes.push({ code: card.code, claimedAt: new Date() });
+      } else if (card.amount === 5) {
+        fiveDollarAmount += card.rate;
+        fiveDollarCodes.push({ code: card.code, claimedAt: new Date() });
+      }
     }
 
-    // Update user's dues
+    // Update user dues and claimed history
     await userModel.updateOne(
       { _id: user._id },
       {
         $inc: {
           "dues.twoDollarTotal": twoDollarAmount,
           "dues.fiveDollarTotal": fiveDollarAmount
+        },
+        $push: {
+          "claimedHistory.twoDollar": { $each: twoDollarCodes },
+          "claimedHistory.fiveDollar": { $each: fiveDollarCodes }
         }
       }
     );
@@ -157,6 +168,8 @@ const claimGiftCards = async (req, res) => {
     res.status(500).json({ message: "Failed to claim codes", error });
   }
 };
+
+
 //buy-giftCard -----
 
 // spacific giftcard dues +++++
@@ -320,6 +333,93 @@ const getAllBuyerEmails = async (req, res) => {
 // Get All Buyer Email -----
 
 
+//giftcardhistry +++++
+export const getClaimedHistory = async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await userModel.findOne({ email: userEmail });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { type, page = 1, limit = 10, search = "" } = req.query;
+
+    const query = {
+      claimedBy: user._id,
+      isClaimed: true,
+    };
+
+    if (type === "2") query.amount = 2;
+    else if (type === "5") query.amount = 5;
+
+    if (search) {
+      query.code = { $regex: search, $options: "i" };
+    }
+
+    const total = await giftCardModel.countDocuments(query);
+
+    const data = await giftCardModel
+      .find(query)
+      .sort({ claimedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const codes = data.map((item) => item.code);
+
+    res.status(200).json({
+      total,
+      codes,
+    });
+  } catch (err) {
+    console.error("Claimed History Error:", err);
+    res.status(500).json({ message: "Failed to fetch claimed history" });
+  }
+};
+
+
+//giftcardhistry -----
+
+// redeemedSummary +++++
+export const getRedeemedSummary = async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await userModel.findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const redeemedCards = await giftCardModel.find({
+      claimedBy: user._id,
+      isClaimed: true,
+    });
+
+    const twoDollarCount = redeemedCards.filter((c) => c.amount === 2).length;
+    const fiveDollarCount = redeemedCards.filter((c) => c.amount === 5).length;
+
+    const totalAmount =
+      twoDollarCount * 200 + fiveDollarCount * 515;
+
+    res.status(200).json({
+      twoDollar: {
+        count: twoDollarCount,
+        amount: twoDollarCount * 200,
+      },
+      fiveDollar: {
+        count: fiveDollarCount,
+        amount: fiveDollarCount * 515,
+      },
+      totalAmount,
+    });
+  } catch (err) {
+    console.error("Summary Error:", err);
+    res.status(500).json({ message: "Failed to load redeemed summary" });
+  }
+};
+
+//redeemedSummary -----
+
+
 export const giftCardController = {
   uploadCodes,
   getGiftCardStats,
@@ -328,5 +428,7 @@ export const giftCardController = {
   getAvailableGiftCards,
   getFullDues,
   reduceDues,
-  getAllBuyerEmails
+  getAllBuyerEmails,
+  getClaimedHistory,
+  getRedeemedSummary
 };
