@@ -17,6 +17,8 @@ giftCard.post("/reduce-dues", verifyToken, giftCardController.reduceDues);
 giftCard.get("/buyer-emails", verifyToken, giftCardController.getAllBuyerEmails);
 giftCard.get("/claimed-history", verifyToken, giftCardController.getClaimedHistory);
 giftCard.get("/redeemed-summary", verifyToken, giftCardController.getRedeemedSummary);
+giftCard.get("/uploaded-history", verifyToken,  giftCardController.getUploadedHistory);
+
 
 export default giftCard
 

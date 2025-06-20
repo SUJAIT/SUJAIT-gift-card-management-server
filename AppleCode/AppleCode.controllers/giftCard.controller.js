@@ -419,6 +419,35 @@ export const getRedeemedSummary = async (req, res) => {
 
 //redeemedSummary -----
 
+// admin uploaded code history +++++
+export const getUploadedHistory = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search = "" } = req.query;
+
+    const query = {
+      isClaimed: false,
+      code: { $regex: search, $options: "i" },
+    };
+
+    const total = await giftCardModel.countDocuments(query);
+    const codes = await giftCardModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .select("code -_id");
+
+    res.status(200).json({
+      codes: codes.map((c) => c.code),
+      total,
+    });
+  } catch (err) {
+    console.error("Uploaded history error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// admin uploaded code history -----
 
 export const giftCardController = {
   uploadCodes,
@@ -430,5 +459,6 @@ export const giftCardController = {
   reduceDues,
   getAllBuyerEmails,
   getClaimedHistory,
-  getRedeemedSummary
+  getRedeemedSummary,
+  getUploadedHistory
 };
