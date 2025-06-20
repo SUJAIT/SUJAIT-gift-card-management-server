@@ -422,18 +422,25 @@ export const getRedeemedSummary = async (req, res) => {
 // admin uploaded code history +++++
 export const getUploadedHistory = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "" } = req.query;
+    const { page = 1, limit = 10, search = "", amount } = req.query;
+
+    const parsedAmount = parseInt(amount);
+    const isAmountValid = parsedAmount === 2 || parsedAmount === 5;
 
     const query = {
       isClaimed: false,
       code: { $regex: search, $options: "i" },
     };
 
+    if (isAmountValid) {
+      query.amount = parsedAmount;
+    }
+
     const total = await giftCardModel.countDocuments(query);
     const codes = await giftCardModel
       .find(query)
       .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
+      .skip((page - 1) * Number(limit))
       .limit(Number(limit))
       .select("code -_id");
 
@@ -446,6 +453,10 @@ export const getUploadedHistory = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+
+
 
 // admin uploaded code history -----
 
